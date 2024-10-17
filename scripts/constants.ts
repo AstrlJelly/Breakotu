@@ -1,0 +1,6 @@
+const FRAME_DELAY = 1000 / 60;
+const START_LIVES = 3;
+
+const BOUNCE_LENIENCY = 20;
+const MAX_BOUNCE_CHANGE = 80;
+const MAX_BOUNCE_ANGLE = 60;
