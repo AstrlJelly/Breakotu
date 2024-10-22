@@ -34,8 +34,8 @@ class BreakoutBall {
             cy = this.ball.y;
         let rx = rect.getX(),
             ry = rect.getY();
-        let rw = rect.getWidth(),
-            rh = rect.getHeight();
+        let rw = rect.width,
+            rh = rect.height;
 
         let checkX = cx,
             checkY = cy;
@@ -61,7 +61,7 @@ class BreakoutBall {
         let distX = cx - checkX;
         let distY = cy - checkY;
         let distance = Math.sqrt(distX * distX + distY * distY);
-        if (distance <= this.ball.getRadius()) {
+        if (distance <= this.ball.radius) {
             // return collision;
             return new Vector(distX, distY);
         }
@@ -74,7 +74,7 @@ class BreakoutBall {
         if (!this.collisionsEnabled) return;
         let ballX = vector?.x ?? this.x;
         let ballY = vector?.y ?? this.y;
-        let ballRad = this.ball.getRadius();
+        let ballRad = this.ball.radius;
         if (ballY - ballRad > getHeight() - UI_HEIGHT) {
             this.moveBallToCenter();
             return true;
@@ -114,7 +114,7 @@ class BreakoutBall {
                 let degrees =
                     Math.atan2(this.vel.y, this.vel.x) * (180 / Math.PI);
                 let ballNormalizedX =
-                    (ballX - paddle.getX()) / paddle.getWidth();
+                    (ballX - paddle.getX()) / paddle.width;
                 degrees += MAX_BOUNCE_CHANGE * -(0.5 - ballNormalizedX);
                 // -180 is left, 0 is right, -90 is straight up
                 degrees = clamp(

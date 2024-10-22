@@ -35,7 +35,8 @@ let balls: BreakoutBall[] = [];
 let paddle: Rectangle; // = null;
 let paddleVel = 0;
 
-function main() {
+function init() {
+    // init();
     drawRectangle(
         getWidth() + SIDE_BUFFER * 2,
         getHeight() + SIDE_BUFFER,
@@ -108,7 +109,7 @@ function initUI() {
 function breakBrick(brick : Rectangle) {
     playOneShot("break_brick");
     shakeScreen(150, 10);
-    remove(brick);
+    brick.remove();
 }
 
 function onMouseMove(e : MouseEvent) {
@@ -119,7 +120,7 @@ function onMouseMove(e : MouseEvent) {
 function movePaddleFromMouse(x : number) {
     let prevX = paddle.getX();
     paddle.setPosition(
-        clamp(x - paddle.getWidth() / 2, 0, getWidth() - paddle.getWidth()),
+        clamp(x - paddle.width / 2, 0, getWidth() - paddle.width),
         getHeight() - PADDLE_OFFSET - PADDLE_HEIGHT - UI_HEIGHT
     );
     paddleVel /= 2;
@@ -131,8 +132,8 @@ function decayPaddleVel() {
 }
 
 function setBallVelToPaddle(ball: BreakoutBall) {
-    ball.vel.x = -1 * (ball.x - paddle.getX() - paddle.getWidth() / 2);
-    ball.vel.y = -1 * (ball.y - paddle.getY() - paddle.getHeight() / 2);
+    ball.vel.x = -1 * (ball.x - paddle.getX() - paddle.width / 2);
+    ball.vel.y = -1 * (ball.y - paddle.getY() - paddle.height / 2);
     // ball.normalizeVel();
 }
 
@@ -162,5 +163,3 @@ function moveScreenRandomly(mag = 5) {
         1, 0, 0, 1, (0.5 - Math.random()) * mag, (0.5 - Math.random()) * mag
     );
 }
-
-main();

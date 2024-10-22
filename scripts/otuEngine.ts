@@ -13,90 +13,13 @@ if (!__CANVAS || !__CTX) {
 const CANVAS: HTMLCanvasElement = __CANVAS;
 const CTX: CanvasRenderingContext2D = __CTX;
 
+// const OCANVAS = CANVAS.transferControlToOffscreen();
+// const OCTX = OCANVAS.getContext("2d");
+
+// const worker = new Worker("offscreenCanvas.js");
+// worker.postMessage({ canvas: OCANVAS }, [OCANVAS]);
+
 type OtuMouseEvent = (this: HTMLCanvasElement, ev: MouseEvent) => any;
-
-function mainLoop() {
-    requestAnimationFrame(mainLoop);
-}
-
-function getWidth() {
-    return CANVAS.width;
-}
-
-function getHeight() {
-    return CANVAS.height;
-}
-
-// // use a set to basically use functions as a key and value
-// // an object as a key is... weird. but it works extremely well.
-// // it allows for O(1) adding and removal
-// // it maybe doesn't really matter, but it's cool!!
-// const MOUSE_CLICK_METHODS = new Set<Function>();
-// CANVAS.addEventListener("click", () => MOUSE_CLICK_METHODS.forEach(v => v()), false);
-
-// // return func so that you can create the func inside the function call
-// function addMouseClickMethod(func : Function) {
-//     MOUSE_CLICK_METHODS.add(func);
-//     return func;
-// }
-
-// function removeMouseClickMethod(func : Function) {
-//     return MOUSE_CLICK_METHODS.delete(func);
-// }
-
-//#region mouse event
-// return func so that you can create the func inside the function call
-function addMouseClickMethod(func: OtuMouseEvent) {
-    CANVAS.addEventListener("click", func, false);
-    return func;
-}
-
-function removeMouseClickMethod(func: OtuMouseEvent) {
-    return CANVAS.removeEventListener("click", func, false);
-    // return MOUSE_CLICK_METHODS.delete(func);
-}
-
-function addMouseMoveMethod(func: OtuMouseEvent) {
-    CANVAS.addEventListener("mousemove", func, false);
-    return func;
-}
-
-function removeMouseMoveMethod(func: OtuMouseEvent) {
-    return CANVAS.removeEventListener("mousemove", func, false);
-    // return MOUSE_CLICK_METHODS.delete(func);
-}
-//#endregion
-
-//#region sfx
-const allSfxNames = {
-    // "break_brick": "b7d1f6a0601098bc880fde49d791738f",
-    break_brick: "2bf5829b077f520d6b57e390c3a9d78d",
-    // "scream_short": "2bf5829b077f520d6b57e390c3a9d78d",
-    scream: "6e39d7fec9c7dfa7e621192c2294239f",
-    bounce: "ff57354c2646847faf94034145d6a23a",
-    power1: "9de78ce7bbe673cefa342b7a4fa0aa76",
-    power2: "77c5bc78c11bdf2c77ef16d9b648de02",
-};
-
-const allSfx = new Map(
-    Object.entries(allSfxNames).map((kv) => [
-        kv[0],
-        new Audio("https://codehs.com/uploads/" + kv[1]),
-    ])
-);
-
-function playOneShot(sfxName: string) {
-    let sfx = allSfx.get(sfxName);
-    if (sfx) {
-        // restart sfx, then play it. acts as a oneshot
-        sfx.pause();
-        sfx.currentTime = 0;
-        sfx.play();
-    } else {
-        console.error(sfxName + " is not a valid sfx!");
-    }
-}
-//#endregion
 
 class Vector {
     x: number;
@@ -190,38 +113,7 @@ class Vector {
     }
 }
 
-//#region gameobjects
-
-
-// gameobject helper functions
-// draws a circle in a single liner, and returns the circle object.
-function drawCircle(rad = 0, x = 0, y = 0, color = "black"): Circle {
-    let circ = new Circle(rad);
-    drawObject(circ, x, y, color);
-    return circ;
-}
-
-// draws a rectangle in a single liner, and returns the rectangle object.
-function drawRectangle(width = 0, height = 0, x = 0, y = 0, color = "black" /*, centerAnchor = true*/): Rectangle {
-    let rect = new Rectangle(width, height);
-    drawObject(rect, x, y, color);
-    return rect;
-}
-
-// // draws a line in a single liner (lol), and returns the line object.
-// function drawLine(sX = 0, sY = 0, eX = 0, eY = 0) {
-//     let line = new Line(sX, sY, eX, eY);
-//     add(line);
-//     return line;
-// }
-
-// common calls for generic canvas objects, put into one function
-function drawObject(obj : GameObject, x : number, y : number, color : string) {
-    obj.setPosition(x, y);
-    obj.setColor(color);
-    obj.add();
-}
-
+//#region GameObjects
 class GameObject {
     static #thingID: number;
     static DEGREES: number;
@@ -229,14 +121,15 @@ class GameObject {
     // gameobject vars
     #alive: boolean;
     #id: number;
-    #type: string;
+    // #type: string;
     #debug: boolean;
 
     // pos/scale vars
     #x: number;
     #y: number;
-    #height: number;
-    #width: number;
+    #size: Vector;
+    // #height: number;
+    // #width: number;
     bounds: { left: number; right: number; top: number; bottom: number } | null;
     anchor: Vector;
     lineWidth: number;
@@ -252,25 +145,28 @@ class GameObject {
     _layer: number;
     _lastCalculatedBoundsID: number;
     _sortInvalidated: boolean;
-    _boundsInvalidated: boolean;
+    // _boundsInvalidated: boolean;
     _invalidationDependants: GameObject[];
-    constructor() {
-        this.#type = "Thing";
+    constructor(width: number = 0, height: number = 0) {
+        // this.#type = "Thing";
         this.#id = GameObject.#thingID++;
         this.#debug = false;
         this.#alive = true;
 
         this.#x = 0;
         this.#y = 0;
-        this.#height = 0;
-        this.#width = 0;
+        this.#size = new Vector(width, height);
+        // this.#height = 0;
+        // this.#width = 0;
         this.bounds = null;
-        this.anchor = new Vector(0, 0);
-        this.lineWidth = 1;
+        this._updateBounds();
+        this.anchor = new Vector(0.5, 0.5);
+        console.log(this.anchor.x);
+        this.lineWidth = 2;
         this.filled = true;
     
         this.#color = "#000000";
-        this.opacity = 0;
+        this.opacity = 1;
         this.stroke = "#000000";
         this.#hasBorder = false;
         this.focused = false;
@@ -278,11 +174,14 @@ class GameObject {
         this._layer = 1;
         this._lastCalculatedBoundsID = 0;
         this._sortInvalidated = true;
-        this._boundsInvalidated = true;
+        // this._boundsInvalidated = true;
         this._invalidationDependants = [];
     }
     add() {
-
+        ALL_GAMEOBJECTS.set(this.#id, this);
+    }
+    remove() {
+        ALL_GAMEOBJECTS.delete(this.#id);
     }
 
     set layer(newLayer) {
@@ -293,18 +192,18 @@ class GameObject {
         return this._layer;
     }
     set width(width) {
-        this.#width = width;
+        this.#size.x = width;
         this._invalidateBounds();
     }
     get width() {
-        return this.#width;
+        return this.#size.x;
     }
     set height(height) {
-        this.#height = height;
+        this.#size.y = height;
         this._invalidateBounds();
     }
     get height() {
-        return this.#height;
+        return this.#size.y;
     }
     set rotation(rotation) {
         this.#rotation = rotation;
@@ -333,13 +232,7 @@ class GameObject {
     get y() {
         return this.#y;
     }
-    // setType(type: string) {
-    //     this.type = type;
-    // }
-    getType() {
-        return this.#type;
-    }
-    getId() {
+    get id() {
         return this.#id;
     }
     setFilled(filled: boolean) {
@@ -392,11 +285,6 @@ class GameObject {
         }
     }
     rotate(degrees: number, angleUnit: number) {
-        if (arguments.length < 1 || arguments.length > 2) {
-            throw new Error(
-                "You should pass exactly 1 argument to `rotate(degrees, angleUnit)`."
-            );
-        }
         if (!isFinite(degrees)) {
             throw new TypeError(
                 "Invalid value for degrees. Make sure you are passing finite numbers to `rotate(degrees, angleUnit)`. Did you perform a calculation on a variable that is not a number?"
@@ -462,8 +350,9 @@ class GameObject {
         this.x += dx;
         this.y += dy;
     }
-    draw(context2: CanvasRenderingContext2D, subclassDraw: Function) {
+    draw(context2: CanvasRenderingContext2D, subclassDraw: Function | null = null) {
         context2.save();
+        this.anchor = new Vector(0.5, 0.5);
         if (this.#hasBorder) {
             context2.strokeStyle = this.stroke.toString();
             context2.lineWidth = this.lineWidth;
@@ -518,7 +407,7 @@ class GameObject {
         this.focused = false;
     }
     describe() {
-        return `A ${this.#type} at ${this.x}, ${this.y}. Colored: ${
+        return `A ${typeof(this)} at ${this.x}, ${this.y}. Colored: ${
             this.#color
         }.`;
     }
@@ -548,18 +437,22 @@ class GameObject {
         return this.anchor;
     }
     getBounds(): typeof this.bounds {
-        if (this._boundsInvalidated) {
+        if (this._boundsInvalidated()) {
             this._updateBounds();
         }
         return this.bounds;
     }
     _invalidateBounds() {
-        this._boundsInvalidated = true;
+        this.bounds = null;
         this._invalidationDependants.forEach((element) => {
             element._invalidateBounds();
         });
     }
+    _boundsInvalidated() {
+        return this.bounds == null;
+    }
     _updateBounds() {
+        this.anchor = new Vector(0.5, 0.5);
         let left = Math.ceil(this.x - this.anchor.x * this.width);
         let right = Math.ceil(this.x + (1 - this.anchor.x) * this.width);
         let top = Math.ceil(this.y - this.anchor.y * this.height);
@@ -571,6 +464,166 @@ class GameObject {
             bottom,
         };
         this._lastCalculatedBoundsID++;
-        this._boundsInvalidated = false;
+        // this._boundsInvalidated = false;
     }
 }
+
+class Rectangle extends GameObject {
+    constructor(width: number, height: number) {
+        super(width, height);
+        // this.#width = width;
+        // this.#height = height;
+    }
+}
+
+class Circle extends GameObject {
+    #radius : number;
+
+    constructor(radius: number) {
+        super();
+        this.#radius = radius;
+    }
+
+    set radius(radius : number) {
+        this.#radius = radius;
+    }
+    get radius() : number {
+        return this.#radius;
+    }
+}
+//#endregion
+
+const ALL_GAMEOBJECTS : Map<number, GameObject> = new Map<number, GameObject>();
+
+function initEngine() {
+    drawRectangle(50, 50, 50, 50);
+    mainLoop();
+}
+
+function mainLoop() {
+    iterateFunc(ALL_GAMEOBJECTS.values(), (go : GameObject) => {
+        console.log(go.describe());
+        go.draw(CTX);
+    });
+    requestAnimationFrame(mainLoop);
+}
+
+function getWidth() {
+    return CANVAS.width;
+}
+
+function getHeight() {
+    return CANVAS.height;
+}
+
+// // use a set to basically use functions as a key and value
+// // an object as a key is... weird. but it works extremely well.
+// // it allows for O(1) adding and removal
+// // it maybe doesn't really matter, but it's cool!!
+// const MOUSE_CLICK_METHODS = new Set<Function>();
+// CANVAS.addEventListener("click", () => MOUSE_CLICK_METHODS.forEach(v => v()), false);
+
+// // return func so that you can create the func inside the function call
+// function addMouseClickMethod(func : Function) {
+//     MOUSE_CLICK_METHODS.add(func);
+//     return func;
+// }
+
+// function removeMouseClickMethod(func : Function) {
+//     return MOUSE_CLICK_METHODS.delete(func);
+// }
+
+//#region mouse event
+// return func so that you can create the func inside the function call
+function addMouseClickMethod(func: OtuMouseEvent) {
+    CANVAS.addEventListener("click", func, false);
+    return func;
+}
+
+function removeMouseClickMethod(func: OtuMouseEvent) {
+    return CANVAS.removeEventListener("click", func, false);
+    // return MOUSE_CLICK_METHODS.delete(func);
+}
+
+function addMouseMoveMethod(func: OtuMouseEvent) {
+    CANVAS.addEventListener("mousemove", func, false);
+    return func;
+}
+
+function removeMouseMoveMethod(func: OtuMouseEvent) {
+    return CANVAS.removeEventListener("mousemove", func, false);
+    // return MOUSE_CLICK_METHODS.delete(func);
+}
+//#endregion
+
+//#region sfx
+const allSfxNames = {
+    // "break_brick": "b7d1f6a0601098bc880fde49d791738f",
+    break_brick: "2bf5829b077f520d6b57e390c3a9d78d",
+    // "scream_short": "2bf5829b077f520d6b57e390c3a9d78d",
+    scream:      "6e39d7fec9c7dfa7e621192c2294239f",
+    bounce:      "ff57354c2646847faf94034145d6a23a",
+    power1:      "9de78ce7bbe673cefa342b7a4fa0aa76",
+    power2:      "77c5bc78c11bdf2c77ef16d9b648de02",
+};
+
+const allSfx = new Map(
+    Object.entries(allSfxNames).map((kv) => [
+        kv[0],
+        new Audio("https://codehs.com/uploads/" + kv[1]),
+    ])
+);
+
+function playOneShot(sfxName: string) {
+    let sfx = allSfx.get(sfxName);
+    if (sfx) {
+        // restart sfx, then play it. acts as a oneshot
+        sfx.pause();
+        sfx.currentTime = 0;
+        sfx.play();
+    } else {
+        console.error(sfxName + " is not a valid sfx!");
+    }
+}
+
+function* iterateFunc<T>(iterator: IterableIterator<T>, mapping: Function) {
+    for (let i of iterator) {
+        yield mapping(i);
+    }
+}
+
+//#endregion
+
+
+
+// gameobject helper functions
+// draws a circle in a single liner, and returns the circle object.
+function drawCircle(rad = 0, x = 0, y = 0, color = "black"): Circle {
+    let circ = new Circle(rad);
+    drawObject(circ, x, y, color);
+    return circ;
+}
+
+// draws a rectangle in a single liner, and returns the rectangle object.
+function drawRectangle(width = 0, height = 0, x = 0, y = 0, color = "black" /*, centerAnchor = true*/): Rectangle {
+    let rect = new Rectangle(width, height);
+    drawObject(rect, x, y, color);
+    return rect;
+}
+
+// // draws a line in a single liner (lol), and returns the line object.
+// function drawLine(sX = 0, sY = 0, eX = 0, eY = 0) {
+//     let line = new Line(sX, sY, eX, eY);
+//     add(line);
+//     return line;
+// }
+
+// common calls for generic canvas objects, put into one function
+function drawObject(obj : GameObject, x : number, y : number, color : string) {
+    obj.setPosition(x, y);
+    obj.setColor(color);
+    obj.add();
+}
+
+drawRectangle(50, 50, 50, 50, "green");
+initEngine();
